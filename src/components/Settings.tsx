@@ -1,10 +1,13 @@
 'use client';
 
-import { ModelSettings, ThinkingMode } from '@/lib/types';
+import { ModelSettings, ThinkingMode, DocumentSettings } from '@/lib/types';
 
 interface SettingsProps {
   settings: ModelSettings;
   onSettingsChange: (settings: ModelSettings) => void;
+  documentSettings: DocumentSettings;
+  onDocumentSettingsChange: (settings: DocumentSettings) => void;
+  currentDocumentName?: string;
 }
 
 const PRESET_MODELS = [
@@ -13,7 +16,7 @@ const PRESET_MODELS = [
   { id: 'claude-haiku-4-5-20251001', name: 'Claude Haiku 4.5' },
 ];
 
-export default function Settings({ settings, onSettingsChange }: SettingsProps) {
+export default function Settings({ settings, onSettingsChange, documentSettings, onDocumentSettingsChange, currentDocumentName }: SettingsProps) {
   const handleModelChange = (modelId: string) => {
     onSettingsChange({ ...settings, modelId });
   };
@@ -130,7 +133,7 @@ export default function Settings({ settings, onSettingsChange }: SettingsProps) 
       <div className="border-t border-[var(--chat-border)] pt-6">
         <h4 className="text-sm font-medium mb-2">Current Configuration</h4>
         <pre className="text-xs bg-[var(--sidebar-bg)] p-3 rounded-lg overflow-x-auto">
-          {JSON.stringify(settings, null, 2)}
+          {JSON.stringify({ model: settings, document: documentSettings }, null, 2)}
         </pre>
       </div>
     </div>

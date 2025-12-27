@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import { v4 as uuidv4 } from 'uuid';
-import { Chat, DocumentFile, ModelSettings, DEFAULT_MODEL_SETTINGS } from '@/lib/types';
+import { Chat, DocumentFile, ModelSettings, DEFAULT_MODEL_SETTINGS, DocumentSettings, DEFAULT_DOCUMENT_SETTINGS, FONT_OPTIONS } from '@/lib/types';
 import { computeBlockDiffs, BlockDiff, hasUncommittedChanges } from '@/lib/diff';
 import Sidebar from '@/components/Sidebar';
 import ChatWindow from '@/components/ChatWindow';
@@ -32,6 +32,7 @@ export default function Home() {
   const [sidebarTab, setSidebarTab] = useState<'files' | 'chats' | 'settings'>('files');
   const [currentSelection, setCurrentSelection] = useState<{ text: string; from: number; to: number } | null>(null);
   const [isCommitting, setIsCommitting] = useState(false);
+  const [documentSettings, setDocumentSettings] = useState<DocumentSettings>(DEFAULT_DOCUMENT_SETTINGS);
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Load settings from localStorage on mount
@@ -66,6 +67,36 @@ export default function Home() {
   const handleModelSettingsChange = (newSettings: ModelSettings) => {
     setModelSettings(newSettings);
     localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(newSettings));
+  };
+
+  // Load document settings from disk
+  const loadDocumentSettings = async (documentPath: string) => {
+    try {
+      const response = await fetch(`/api/document-settings?path=${encodeURIComponent(documentPath)}`);
+      const data = await response.json();
+      setDocumentSettings(data.settings || DEFAULT_DOCUMENT_SETTINGS);
+    } catch (error) {
+      console.error('Error loading document settings:', error);
+      setDocumentSettings(DEFAULT_DOCUMENT_SETTINGS);
+    }
+  };
+
+  // Save document settings to disk
+  const handleDocumentSettingsChange = async (newSettings: DocumentSettings) => {
+    if (!currentDocument) return;
+    setDocumentSettings(newSettings);
+    try {
+      await fetch('/api/document-settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          documentPath: currentDocument.path,
+          settings: newSettings,
+        }),
+      });
+    } catch (error) {
+      console.error('Error saving document settings:', error);
+    }
   };
 
   // Auto-save to disk (debounced)
@@ -125,6 +156,9 @@ export default function Home() {
     }
 
     try {
+      // Load document settings for this file
+      loadDocumentSettings(file.path);
+
       // Load the file content
       const response = await fetch('/api/files', {
         method: 'POST',
@@ -280,11 +314,13 @@ export default function Home() {
         chats={chats}
         activeTab={sidebarTab}
         modelSettings={modelSettings}
+        documentSettings={documentSettings}
         onTabChange={setSidebarTab}
         onFileSelect={handleFileSelect}
         onChatSelect={handleChatSelect}
         onChatDelete={handleChatDelete}
         onModelSettingsChange={handleModelSettingsChange}
+        onDocumentSettingsChange={handleDocumentSettingsChange}
         onNewChat={() => createNewChat()}
       />
 
@@ -324,6 +360,9 @@ export default function Home() {
             <Editor
               content={documentContent}
               lineDiffs={lineDiffs}
+              fontFamily={FONT_OPTIONS.find(f => f.id === documentSettings.fontFamily)?.value || FONT_OPTIONS[0].value}
+              fontId={documentSettings.fontFamily}
+              onFontChange={(fontId) => handleDocumentSettingsChange({ ...documentSettings, fontFamily: fontId })}
               onContentChange={handleContentChange}
               onSelectionChange={handleSelectionChange}
               onOpenChat={handleOpenChat}

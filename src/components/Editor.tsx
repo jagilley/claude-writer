@@ -12,10 +12,14 @@ import { Decoration, DecorationSet } from '@tiptap/pm/view';
 import { useCallback, useEffect, useState, useRef, useMemo } from 'react';
 import { markdownToHtml, htmlToMarkdown } from '@/lib/markdown';
 import { BlockDiff } from '@/lib/diff';
+import { FONT_OPTIONS } from '@/lib/types';
 
 interface EditorProps {
   content: string;
   lineDiffs: BlockDiff[];
+  fontFamily: string;
+  fontId: string;
+  onFontChange: (fontId: string) => void;
   onContentChange: (markdown: string) => void;
   onSelectionChange: (selection: { text: string; from: number; to: number } | null) => void;
   onOpenChat: (selectedText: string) => void;
@@ -65,7 +69,7 @@ const DiffExtension = Extension.create({
   },
 });
 
-export default function Editor({ content, lineDiffs, onContentChange, onSelectionChange, onOpenChat }: EditorProps) {
+export default function Editor({ content, lineDiffs, fontFamily, fontId, onFontChange, onContentChange, onSelectionChange, onOpenChat }: EditorProps) {
   const [selectionMenu, setSelectionMenu] = useState<{ x: number; y: number; text: string } | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const editorContainerRef = useRef<HTMLDivElement>(null);
@@ -165,6 +169,45 @@ export default function Editor({ content, lineDiffs, onContentChange, onSelectio
     <div className="flex flex-col h-full relative">
       {/* Toolbar */}
       <div className="toolbar">
+        {/* Font Selector */}
+        <select
+          value={fontId}
+          onChange={(e) => onFontChange(e.target.value)}
+          className="font-selector"
+          title="Select font"
+        >
+          <optgroup label="Sans-serif">
+            {FONT_OPTIONS.filter(f => f.category === 'sans').map(font => (
+              <option key={font.id} value={font.id} style={{ fontFamily: font.value }}>
+                {font.name}
+              </option>
+            ))}
+          </optgroup>
+          <optgroup label="Serif">
+            {FONT_OPTIONS.filter(f => f.category === 'serif').map(font => (
+              <option key={font.id} value={font.id} style={{ fontFamily: font.value }}>
+                {font.name}
+              </option>
+            ))}
+          </optgroup>
+          <optgroup label="Monospace">
+            {FONT_OPTIONS.filter(f => f.category === 'mono').map(font => (
+              <option key={font.id} value={font.id} style={{ fontFamily: font.value }}>
+                {font.name}
+              </option>
+            ))}
+          </optgroup>
+          <optgroup label="Casual">
+            {FONT_OPTIONS.filter(f => f.category === 'casual').map(font => (
+              <option key={font.id} value={font.id} style={{ fontFamily: font.value }}>
+                {font.name}
+              </option>
+            ))}
+          </optgroup>
+        </select>
+
+        <div className="toolbar-divider" />
+
         <button
           onClick={() => editor.chain().focus().toggleBold().run()}
           className={editor.isActive('bold') ? 'active' : ''}
@@ -277,7 +320,7 @@ export default function Editor({ content, lineDiffs, onContentChange, onSelectio
       )}
 
       {/* Editor Content */}
-      <div className="flex-1 overflow-auto" ref={editorContainerRef}>
+      <div className="flex-1 overflow-auto" ref={editorContainerRef} style={{ fontFamily }}>
         <EditorContent editor={editor} className="h-full" />
       </div>
     </div>

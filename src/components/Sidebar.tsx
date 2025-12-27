@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Chat, DocumentFile, ModelSettings } from '@/lib/types';
+import { Chat, DocumentFile, ModelSettings, DocumentSettings } from '@/lib/types';
 import Settings from './Settings';
 
 interface SidebarProps {
@@ -9,11 +9,13 @@ interface SidebarProps {
   chats: Chat[];
   activeTab: 'files' | 'chats' | 'settings';
   modelSettings: ModelSettings;
+  documentSettings: DocumentSettings;
   onTabChange: (tab: 'files' | 'chats' | 'settings') => void;
   onFileSelect: (file: { path: string; name: string }) => void;
   onChatSelect: (chatId: string) => void;
   onChatDelete: (chatId: string) => void;
   onModelSettingsChange: (settings: ModelSettings) => void;
+  onDocumentSettingsChange: (settings: DocumentSettings) => void;
   onNewChat: () => void;
 }
 
@@ -28,11 +30,13 @@ export default function Sidebar({
   chats,
   activeTab,
   modelSettings,
+  documentSettings,
   onTabChange,
   onFileSelect,
   onChatSelect,
   onChatDelete,
   onModelSettingsChange,
+  onDocumentSettingsChange,
   onNewChat,
 }: SidebarProps) {
   const [files, setFiles] = useState<FileEntry[]>([]);
@@ -199,6 +203,9 @@ export default function Sidebar({
           <Settings
             settings={modelSettings}
             onSettingsChange={onModelSettingsChange}
+            documentSettings={documentSettings}
+            onDocumentSettingsChange={onDocumentSettingsChange}
+            currentDocumentName={currentDocument?.name}
           />
         )}
       </div>
