@@ -152,7 +152,7 @@ Nemorino, misreading the Elixir's "instructions" (Dulcamara made some things up)
 
 It's cheesy as hell. The crowd doesn't know if it's a bit. Adina doesn't know if it's a bit. Nemo himself isn't sure if it's a bit.
 
-But here's the thing: **it kind of works?** His match that night is actually good. The crowd is actually engaged. Something about committing fully—even to something absurd—has unlocked something.
+But here's the thing: **it kind of works?** His match that night is actually good. The crowd is actually engaged. Something about committing fully—even to something absurd—has unlocked something. After the match, he grabs a mic and delivers an impassioned promo that the crowd appreciates, for once.
 
 **SCENE 7: THE CONTRACT (Act One Finale)**
 
