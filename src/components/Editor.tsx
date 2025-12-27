@@ -6,7 +6,10 @@ import Placeholder from '@tiptap/extension-placeholder';
 import Link from '@tiptap/extension-link';
 import Highlight from '@tiptap/extension-highlight';
 import Typography from '@tiptap/extension-typography';
-import { useCallback, useEffect, useState, useRef } from 'react';
+import { Extension } from '@tiptap/core';
+import { Plugin, PluginKey } from '@tiptap/pm/state';
+import { Decoration, DecorationSet } from '@tiptap/pm/view';
+import { useCallback, useEffect, useState, useRef, useMemo } from 'react';
 import { markdownToHtml, htmlToMarkdown } from '@/lib/markdown';
 import { BlockDiff } from '@/lib/diff';
 
@@ -17,6 +20,50 @@ interface EditorProps {
   onSelectionChange: (selection: { text: string; from: number; to: number } | null) => void;
   onOpenChat: (selectedText: string) => void;
 }
+
+// Plugin key for the diff decoration plugin
+const diffPluginKey = new PluginKey('diffDecorations');
+
+// Store diffs in a ref that the plugin can access
+let globalDiffsRef: BlockDiff[] = [];
+
+// Create a TipTap extension for diff decorations
+const DiffExtension = Extension.create({
+  name: 'diffDecorations',
+
+  addProseMirrorPlugins() {
+    return [
+      new Plugin({
+        key: diffPluginKey,
+        props: {
+          decorations: (state) => {
+            const diffs = globalDiffsRef;
+            if (diffs.length === 0) return DecorationSet.empty;
+
+            const decorations: Decoration[] = [];
+            let blockIndex = 0;
+
+            // Iterate through top-level nodes
+            state.doc.forEach((node, pos) => {
+              const diff = diffs.find(d => d.blockIndex === blockIndex);
+              if (diff) {
+                const className = `diff-${diff.type}`;
+                decorations.push(
+                  Decoration.node(pos, pos + node.nodeSize, {
+                    class: className,
+                  })
+                );
+              }
+              blockIndex++;
+            });
+
+            return DecorationSet.create(state.doc, decorations);
+          },
+        },
+      }),
+    ];
+  },
+});
 
 export default function Editor({ content, lineDiffs, onContentChange, onSelectionChange, onOpenChat }: EditorProps) {
   const [selectionMenu, setSelectionMenu] = useState<{ x: number; y: number; text: string } | null>(null);
@@ -39,6 +86,7 @@ export default function Editor({ content, lineDiffs, onContentChange, onSelectio
       }),
       Highlight,
       Typography,
+      DiffExtension,
     ],
     content: markdownToHtml(content),
     onUpdate: ({ editor }) => {
@@ -80,45 +128,15 @@ export default function Editor({ content, lineDiffs, onContentChange, onSelectio
     }
   }, [content, editor]);
 
-  // Apply diff styling to blocks
-  const applyDiffStyling = useCallback(() => {
-    if (!editorContainerRef.current) return;
-
-    // Find the TipTap editor content element
-    const tiptapEl = editorContainerRef.current.querySelector('.tiptap');
-    if (!tiptapEl) return;
-
-    // Get all direct children (top-level blocks)
-    const blocks = tiptapEl.children;
-
-    console.log('[Diff] Applying styles:', {
-      lineDiffs,
-      blockCount: blocks.length,
-      diffCount: lineDiffs.length
-    });
-
-    // Clear existing diff classes
-    Array.from(blocks).forEach((block) => {
-      block.classList.remove('diff-added', 'diff-modified', 'diff-removed');
-    });
-
-    // Apply diff classes based on block index
-    lineDiffs.forEach((diff) => {
-      const block = blocks[diff.blockIndex];
-      console.log('[Diff] Applying to block:', { blockIndex: diff.blockIndex, type: diff.type, blockExists: !!block });
-      if (block) {
-        block.classList.add(`diff-${diff.type}`);
-      }
-    });
-  }, [lineDiffs]);
-
-  // Re-apply diff styling when diffs change or after a short delay when content changes
+  // Update the global diffs ref and trigger editor re-render for decorations
   useEffect(() => {
-    applyDiffStyling();
-    // Also apply after a small delay to catch DOM updates
-    const timeout = setTimeout(applyDiffStyling, 50);
-    return () => clearTimeout(timeout);
-  }, [lineDiffs, applyDiffStyling, content]);
+    globalDiffsRef = lineDiffs;
+
+    // Force editor to re-render decorations by dispatching an empty transaction
+    if (editor) {
+      editor.view.dispatch(editor.state.tr);
+    }
+  }, [lineDiffs, editor]);
 
   // Close menu when clicking outside
   useEffect(() => {
