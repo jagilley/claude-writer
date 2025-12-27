@@ -30,7 +30,7 @@ The promotion is at a crossroads: stay independent and probably die slowly, or g
 
 _Babyface. Lower-card. The guy who opens the show._
 
-Nemo (Nemo Reno?) has been wrestling for Amore Pro for six years. He's technically solid—good fundamentals, safe worker, shows up early and stays late. But he has no gimmick, no presence, no "it factor." His entrance music is generic. His tights are plain black. When he wrestles, the crowd goes to get beer.
+Nemo has been wrestling for Amore Pro for six years. He's technically solid—good fundamentals, safe worker, shows up early and stays late. But he has no gimmick, no presence, no "it factor." His entrance music is generic. His tights are plain black. When he wrestles, the crowd goes to get beer.
 
 He is desperately, hopelessly, pathetically in love with Adina. Everyone knows it. He's not subtle. He writes her poetry (bad poetry). He brings her coffee (she doesn't drink coffee). He once tried to save her from a run-in and got powerbombed for his trouble.
 
