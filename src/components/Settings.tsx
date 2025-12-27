@@ -8,10 +8,9 @@ interface SettingsProps {
 }
 
 const PRESET_MODELS = [
-  { id: 'claude-sonnet-4-20250514', name: 'Claude Sonnet 4' },
-  { id: 'claude-opus-4-0-20250115', name: 'Claude Opus 4' },
-  { id: 'claude-3-5-sonnet-20241022', name: 'Claude 3.5 Sonnet' },
-  { id: 'claude-3-5-haiku-20241022', name: 'Claude 3.5 Haiku' },
+  { id: 'claude-opus-4-5-20251101', name: 'Claude Opus 4.5' },
+  { id: 'claude-sonnet-4-5-20250929', name: 'Claude Sonnet 4.5' },
+  { id: 'claude-haiku-4-5-20251001', name: 'Claude Haiku 4.5' },
 ];
 
 export default function Settings({ settings, onSettingsChange }: SettingsProps) {
@@ -26,8 +25,6 @@ export default function Settings({ settings, onSettingsChange }: SettingsProps) 
   const handleThinkingBudgetChange = (budget: number) => {
     onSettingsChange({ ...settings, thinkingBudget: budget });
   };
-
-  const isPresetModel = PRESET_MODELS.some((m) => m.id === settings.modelId);
 
   return (
     <div className="p-4 space-y-6">
@@ -64,36 +61,6 @@ export default function Settings({ settings, onSettingsChange }: SettingsProps) 
               </label>
             ))}
 
-            {/* Custom model option */}
-            <label
-              className={`flex items-center p-3 rounded-lg border cursor-pointer transition-colors ${
-                !isPresetModel
-                  ? 'border-[var(--accent)] bg-[var(--accent)]/10'
-                  : 'border-[var(--chat-border)] hover:border-[var(--accent)]/50'
-              }`}
-            >
-              <input
-                type="radio"
-                name="model"
-                checked={!isPresetModel}
-                onChange={() => handleModelChange('')}
-                className="mr-3"
-              />
-              <div className="flex-1">
-                <div className="font-medium">Custom Model</div>
-                <input
-                  type="text"
-                  value={!isPresetModel ? settings.modelId : ''}
-                  onChange={(e) => handleModelChange(e.target.value)}
-                  placeholder="Enter model ID (e.g., claude-3-opus-20240229)"
-                  className="mt-2 w-full p-2 text-sm border border-[var(--chat-border)] rounded bg-[var(--background)] text-[var(--foreground)]"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (isPresetModel) handleModelChange('');
-                  }}
-                />
-              </div>
-            </label>
           </div>
         </div>
       </div>

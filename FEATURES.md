@@ -1,0 +1,8 @@
+- [ ] Chats are formatted rather than displaying the raw markdown
+- [ ] Document changes proposed by Claude from a chat are displayed in a separate pop-up before being applied, so the user can review whether they're good suggestions or not.
+- [ ] ^relatedly, right now when the AI makes changes from a chat, the updated version isn't shown on the page - you have to refresh to see the changes.
+- [ ] I really like the way that VS Code (and other editors) show a preview of what lines have changed in a file since the last git commit. Let's replicate this! See @vscode.png
+- [ ] The pop-up that prompts the user to "Chat about this" when they select text from a document only shows up when the selection is completed on mouse up event, so that the user can still see what they're highlighting.
+- [x] We don't want the ability to specify different model strings, just select different models. Right now, "Claude Opus 4.5" == claude-opus-4-5-20251101, and "Claude Sonnet 4.5" == claude-sonnet-4-5-20250929 and "Claude Haiku 4.5" == claude-haiku-4-5-20251001. These are the only options.
+- [ ] We ought to be able to select the folder we're looking for Markdown documents in. If the folder is not in a git repo, that's fine, saving just means saving to disk. Either way, we put the .writer folder inside this folder.
+- [ ] We ought to be able to select custom fonts for the document we're editing, which are also persisted!

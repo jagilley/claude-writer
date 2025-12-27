@@ -36,7 +36,7 @@ export interface ModelSettings {
 }
 
 export const DEFAULT_MODEL_SETTINGS: ModelSettings = {
-  modelId: 'claude-sonnet-4-20250514',
+  modelId: 'claude-sonnet-4-5-20250929',
   thinkingMode: 'disabled',
   thinkingBudget: 10000,
 };

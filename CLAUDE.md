@@ -23,7 +23,7 @@ The central primitive is **chat sessions** - draggable, resizable windows that c
 - A selected text snippet (for focused editing)
 - Continuation-oriented writing
 
-Chats are persisted to disk in a `.writer-chats` directory.
+Chats are persisted to disk in a `.writer/chats` directory.
 
 ### Key Components
 

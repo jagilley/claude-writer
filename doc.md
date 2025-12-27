@@ -71,9 +71,7 @@ He speaks like a tent revival preacher crossed with a used car salesman. He has 
 ### THE ROSTER (Ensemble)
 
 -   **GIANNETTA** — Veteran of the women's division, locker room gossip, secretly has a heart of gold
-    
--   **THE UNCLE** (mentioned/video package) — SALVATORE "THE SENSATION" MORENO, legendary wrestler of the 1980s, recently deceased, secretly Nemorino's uncle
-    
+
 -   **VARIOUS WRESTLERS** — Faces and heels, the community of Amore Pro
     
 
@@ -184,17 +182,19 @@ He signs. He gets his money. He buys more Elixir.
 
 ### ACT TWO
 
-**SCENE 1: THE INHERITANCE (Gossip Spreads)**
+**SCENE 1: THE VIRAL MOMENT (Gossip Spreads)**
 
 The next morning. Giannetta has NEWS.
 
-She's been on wrestling Twitter. She's been doing RESEARCH. And she has discovered something INCREDIBLE:
+She's been on wrestling Twitter. She's been refreshing ALL NIGHT. And she has discovered something INCREDIBLE:
 
-Nemorino—pathetic, lower-card, opening-match Nemorino—is the nephew of **SALVATORE "THE SENSATION" MORENO**. The Sensation was a territory legend who just died last month. And according to probate records (Giannetta is THOROUGH), Nemorino is the sole heir.
+Nemorino's match from last night—the one where he debuted "The Remedy" persona—has gone **VIRAL**. Not because of his moveset, but because of a single moment: after nearly losing, he grabbed the mic and cut an unscripted promo. Raw. Emotional. Real. The kind of moment that makes people forget they're watching a work.
 
-This means: legacy status. Historical credibility. A claim to wrestling royalty. In wrestling terms, Nemorino just became the most eligible bachelor in the building.
+The clip has been shared thousands of times. Podcasters are calling him "the most authentic thing in wrestling." Someone spotted a talent scout from a major promotion in the building last night. A wrestling journalist with 200K followers tweeted: "Remember this name."
 
-Song: **"Did You Hear?"** — A gossip number where the news spreads through the roster at lightning speed, everyone re-evaluating Nemorino, everyone suddenly finding him VERY attractive. This number should be funny, catty, and staged like a game of telephone.
+In wrestling terms, Nemorino just became the hottest free agent in the building.
+
+Song: **"Did You Hear?"** — A gossip number where the news spreads through the roster at lightning speed, everyone scrolling through their phones, reading tweets aloud, watching reaction videos. The staging should be contemporary—screens lighting up faces, notifications dinging, everyone re-evaluating Nemorino in real time. This number should be funny, frantic, and staged like a social media explosion.
 
 **SCENE 2: THE ELIXIR "WORKS" (Nemorino Ascendant)**
 
@@ -211,7 +211,7 @@ Nemorino enters, having consumed more Elixir, ready for whatever happens. He is 
 
 He is baffled. He is delighted. THE ELIXIR IS WORKING.
 
-(He does not know about the inheritance. He thinks it's the Elixir.)
+(He does not know about the viral clip. He thinks it's the Elixir.)
 
 Song: **"It's Working"** — A comic number where Nemorino attributes his new popularity to the magic potion, while the audience knows the truth. Physical comedy, flirtation, escalating absurdity. Maybe he gets lifted onto shoulders. Maybe someone offers him their championship opportunity. He's living his best life.
 
@@ -221,9 +221,9 @@ Adina, still contracted to leave with Belcore, watches Nemorino's sudden popular
 
 She's supposed to be leaving. She has what she wanted—the big league, the spotlight, the trajectory. So why can't she stop watching this idiot drink his fake potion and get fawned over?
 
-Giannetta approaches. She tells Adina about the inheritance—that's why everyone's suddenly interested in Nemo.
+Giannetta approaches. She tells Adina about the viral clip—that's why everyone's suddenly interested in Nemo. One authentic moment and suddenly he's the hottest thing in wrestling Twitter.
 
-Adina's response surprises her: she's not relieved that it's fake, she's ANGRY. These people don't actually see him. They see his uncle. They see what they can get.
+Adina's response surprises her: she's not relieved that it's just internet hype, she's ANGRY. These people don't actually see him. They see a clip. They see clout. They see what they can get.
 
 She sees HIM. She's always seen him. She just didn't... she didn't think it was a STORY. But it is. It's a story about someone who believed in something so hard it changed him. That's the most wrestling thing there is.
 
