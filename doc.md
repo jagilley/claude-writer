@@ -14,6 +14,8 @@ The central question: **If a placebo works, is it fake?** If believing in someth
 
 Dulcamara knows he's selling snake oil. Nemorino knows, on some level, that magic isn't real. But kayfabe has power. The work can become the shoot. That's not a contradiction—that's wrestling.
 
+Nothing showing up
+
 * * *
 
 ## SETTING

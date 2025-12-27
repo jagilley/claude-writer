@@ -1,28 +1,46 @@
 import * as Diff from 'diff';
 
-export type LineDiffType = 'added' | 'modified' | 'removed' | 'unchanged';
+export type BlockDiffType = 'added' | 'modified' | 'removed';
 
-export interface LineDiff {
-  lineNumber: number;
-  type: LineDiffType;
+export interface BlockDiff {
+  blockIndex: number;
+  type: BlockDiffType;
 }
 
 /**
- * Computes line-by-line differences between committed and current content.
- * Returns an array of line diffs for the current content, indicating which
- * lines are added, modified, or unchanged.
+ * Split markdown content into blocks (paragraphs, headings, etc.)
+ * Blocks are separated by blank lines in markdown.
  */
-export function computeLineDiffs(committedContent: string, currentContent: string): LineDiff[] {
+function splitIntoBlocks(content: string): string[] {
+  if (!content) return [];
+
+  // Split by double newlines (paragraph breaks) but also treat single lines as blocks
+  // This handles headings, list items, etc.
+  const blocks = content
+    .split(/\n\n+/)
+    .map(block => block.trim())
+    .filter(block => block.length > 0);
+
+  return blocks;
+}
+
+/**
+ * Computes block-level differences between committed and current content.
+ * Returns an array of block indices that have been added or modified.
+ */
+export function computeBlockDiffs(committedContent: string, currentContent: string): BlockDiff[] {
   if (!committedContent && !currentContent) {
     return [];
   }
 
-  // If there's no committed content, all current lines are "added"
-  if (!committedContent) {
-    const lines = currentContent.split('\n');
-    return lines.map((_, index) => ({
-      lineNumber: index + 1,
-      type: 'added' as LineDiffType,
+  const committedBlocks = splitIntoBlocks(committedContent);
+  const currentBlocks = splitIntoBlocks(currentContent);
+
+  // If there's no committed content, all current blocks are "added"
+  if (committedBlocks.length === 0) {
+    return currentBlocks.map((_, index) => ({
+      blockIndex: index,
+      type: 'added' as BlockDiffType,
     }));
   }
 
@@ -31,40 +49,39 @@ export function computeLineDiffs(committedContent: string, currentContent: strin
     return [];
   }
 
-  const changes = Diff.diffLines(committedContent, currentContent);
-  const lineDiffs: LineDiff[] = [];
-  let currentLineNumber = 1;
+  // Use diff to compare blocks
+  const changes = Diff.diffArrays(committedBlocks, currentBlocks);
+  const blockDiffs: BlockDiff[] = [];
+  let currentBlockIndex = 0;
 
   for (const change of changes) {
-    const lineCount = change.count || 0;
+    const count = change.count || 0;
 
     if (change.added) {
-      // These lines were added in current content
-      for (let i = 0; i < lineCount; i++) {
-        lineDiffs.push({
-          lineNumber: currentLineNumber + i,
+      // These blocks were added in current content
+      for (let i = 0; i < count; i++) {
+        blockDiffs.push({
+          blockIndex: currentBlockIndex + i,
           type: 'added',
         });
       }
-      currentLineNumber += lineCount;
+      currentBlockIndex += count;
     } else if (change.removed) {
-      // These lines were removed - we show a marker at the current position
-      // but don't increment line number since they don't exist in current
-      if (lineDiffs.length > 0 && lineDiffs[lineDiffs.length - 1].lineNumber === currentLineNumber - 1) {
-        // Mark the previous line as modified instead of just added
-        // (this handles the case where a line was changed, not just added/removed)
-        const prevDiff = lineDiffs[lineDiffs.length - 1];
-        if (prevDiff.type === 'added') {
-          prevDiff.type = 'modified';
+      // Blocks were removed - check if this is a modification (removed + added at same spot)
+      // We mark blocks as modified if there's already an "added" entry near this position
+      for (let i = blockDiffs.length - 1; i >= 0; i--) {
+        if (blockDiffs[i].type === 'added' && blockDiffs[i].blockIndex < currentBlockIndex) {
+          blockDiffs[i].type = 'modified';
+          break;
         }
       }
     } else {
-      // Unchanged lines - just advance the line counter
-      currentLineNumber += lineCount;
+      // Unchanged blocks - just advance the counter
+      currentBlockIndex += count;
     }
   }
 
-  return lineDiffs;
+  return blockDiffs;
 }
 
 /**
@@ -73,3 +90,7 @@ export function computeLineDiffs(committedContent: string, currentContent: strin
 export function hasUncommittedChanges(committedContent: string, currentContent: string): boolean {
   return committedContent !== currentContent;
 }
+
+// Re-export for backwards compatibility during transition
+export type LineDiff = BlockDiff;
+export const computeLineDiffs = computeBlockDiffs;

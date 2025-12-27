@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import { v4 as uuidv4 } from 'uuid';
 import { Chat, DocumentFile, ModelSettings, DEFAULT_MODEL_SETTINGS } from '@/lib/types';
-import { computeLineDiffs, LineDiff, hasUncommittedChanges } from '@/lib/diff';
+import { computeBlockDiffs, BlockDiff, hasUncommittedChanges } from '@/lib/diff';
 import Sidebar from '@/components/Sidebar';
 import ChatWindow from '@/components/ChatWindow';
 
@@ -25,7 +25,7 @@ export default function Home() {
   const [currentDocument, setCurrentDocument] = useState<DocumentFile | null>(null);
   const [documentContent, setDocumentContent] = useState('');
   const [committedContent, setCommittedContent] = useState(''); // Content at last git commit
-  const [lineDiffs, setLineDiffs] = useState<LineDiff[]>([]); // Line-level diff markers
+  const [lineDiffs, setLineDiffs] = useState<BlockDiff[]>([]); // Block-level diff markers
   const [chats, setChats] = useState<Chat[]>([]);
   const [activeChats, setActiveChats] = useState<string[]>([]);
   const [modelSettings, setModelSettings] = useState<ModelSettings>(DEFAULT_MODEL_SETTINGS);
@@ -140,12 +140,20 @@ export default function Home() {
       const gitResponse = await fetch(`/api/git?action=showFile&file=${encodeURIComponent(file.path)}`);
       const gitData = await gitResponse.json();
 
+      console.log('[Git] Loaded committed content:', {
+        hasContent: !!gitData.content,
+        contentLength: gitData.content?.length,
+        docContentLength: doc.content.length
+      });
+
       // If file exists in git, use that as committed content, otherwise use current content
       const committed = gitData.content ?? doc.content;
       setCommittedContent(committed);
 
       // Compute initial diffs
-      setLineDiffs(computeLineDiffs(committed, doc.content));
+      const diffs = computeBlockDiffs(committed, doc.content);
+      console.log('[Git] Computed diffs:', diffs);
+      setLineDiffs(diffs);
     } catch (error) {
       console.error('Error loading file:', error);
     }
@@ -154,8 +162,8 @@ export default function Home() {
   const handleContentChange = (markdown: string) => {
     setDocumentContent(markdown);
 
-    // Compute line diffs against committed content
-    setLineDiffs(computeLineDiffs(committedContent, markdown));
+    // Compute block diffs against committed content
+    setLineDiffs(computeBlockDiffs(committedContent, markdown));
 
     // Debounced auto-save to disk
     if (autoSaveTimeoutRef.current) {

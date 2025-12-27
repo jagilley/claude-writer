@@ -50,8 +50,12 @@ export async function GET(request: NextRequest) {
           return NextResponse.json({ error: 'File path required' }, { status: 400 });
         }
         try {
+          // Convert absolute path to relative path from repo root
+          const repoRoot = process.cwd();
+          const relativePath = path.relative(repoRoot, filePath);
+
           // Get the file content at HEAD
-          const content = await git.show([`HEAD:${filePath}`]);
+          const content = await git.show([`HEAD:${relativePath}`]);
           return NextResponse.json({ content });
         } catch {
           // File might not exist in git yet (new file)

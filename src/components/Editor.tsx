@@ -8,11 +8,11 @@ import Highlight from '@tiptap/extension-highlight';
 import Typography from '@tiptap/extension-typography';
 import { useCallback, useEffect, useState, useRef } from 'react';
 import { markdownToHtml, htmlToMarkdown } from '@/lib/markdown';
-import { LineDiff } from '@/lib/diff';
+import { BlockDiff } from '@/lib/diff';
 
 interface EditorProps {
   content: string;
-  lineDiffs: LineDiff[];
+  lineDiffs: BlockDiff[];
   onContentChange: (markdown: string) => void;
   onSelectionChange: (selection: { text: string; from: number; to: number } | null) => void;
   onOpenChat: (selectedText: string) => void;
@@ -21,7 +21,6 @@ interface EditorProps {
 export default function Editor({ content, lineDiffs, onContentChange, onSelectionChange, onOpenChat }: EditorProps) {
   const [selectionMenu, setSelectionMenu] = useState<{ x: number; y: number; text: string } | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
-  const gutterRef = useRef<HTMLDivElement>(null);
   const editorContainerRef = useRef<HTMLDivElement>(null);
 
   const editor = useEditor({
@@ -81,6 +80,46 @@ export default function Editor({ content, lineDiffs, onContentChange, onSelectio
     }
   }, [content, editor]);
 
+  // Apply diff styling to blocks
+  const applyDiffStyling = useCallback(() => {
+    if (!editorContainerRef.current) return;
+
+    // Find the TipTap editor content element
+    const tiptapEl = editorContainerRef.current.querySelector('.tiptap');
+    if (!tiptapEl) return;
+
+    // Get all direct children (top-level blocks)
+    const blocks = tiptapEl.children;
+
+    console.log('[Diff] Applying styles:', {
+      lineDiffs,
+      blockCount: blocks.length,
+      diffCount: lineDiffs.length
+    });
+
+    // Clear existing diff classes
+    Array.from(blocks).forEach((block) => {
+      block.classList.remove('diff-added', 'diff-modified', 'diff-removed');
+    });
+
+    // Apply diff classes based on block index
+    lineDiffs.forEach((diff) => {
+      const block = blocks[diff.blockIndex];
+      console.log('[Diff] Applying to block:', { blockIndex: diff.blockIndex, type: diff.type, blockExists: !!block });
+      if (block) {
+        block.classList.add(`diff-${diff.type}`);
+      }
+    });
+  }, [lineDiffs]);
+
+  // Re-apply diff styling when diffs change or after a short delay when content changes
+  useEffect(() => {
+    applyDiffStyling();
+    // Also apply after a small delay to catch DOM updates
+    const timeout = setTimeout(applyDiffStyling, 50);
+    return () => clearTimeout(timeout);
+  }, [lineDiffs, applyDiffStyling, content]);
+
   // Close menu when clicking outside
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -99,19 +138,6 @@ export default function Editor({ content, lineDiffs, onContentChange, onSelectio
       setSelectionMenu(null);
     }
   }, [selectionMenu, onOpenChat]);
-
-  // Get diff type for a line number
-  const getDiffType = useCallback((lineNum: number) => {
-    const diff = lineDiffs.find(d => d.lineNumber === lineNum);
-    return diff?.type || null;
-  }, [lineDiffs]);
-
-  // Compute gutter markers based on content lines
-  const gutterMarkers = content.split('\n').map((_, index) => {
-    const lineNum = index + 1;
-    const diffType = getDiffType(lineNum);
-    return { lineNumber: lineNum, type: diffType };
-  });
 
   if (!editor) {
     return <div className="flex items-center justify-center h-full">Loading editor...</div>;
@@ -232,50 +258,9 @@ export default function Editor({ content, lineDiffs, onContentChange, onSelectio
         </div>
       )}
 
-      {/* Editor Content with Gutter */}
-      <div className="flex-1 overflow-auto flex" ref={editorContainerRef}>
-        {/* Diff Gutter */}
-        <div
-          ref={gutterRef}
-          className="flex-shrink-0 w-3 bg-transparent"
-          style={{ minWidth: '12px' }}
-        >
-          {gutterMarkers.map((marker, index) => (
-            <div
-              key={index}
-              className="h-6 flex items-center justify-center"
-              style={{
-                backgroundColor:
-                  marker.type === 'added'
-                    ? 'rgba(34, 197, 94, 0.3)' // green
-                    : marker.type === 'modified'
-                    ? 'rgba(59, 130, 246, 0.3)' // blue
-                    : marker.type === 'removed'
-                    ? 'rgba(239, 68, 68, 0.3)' // red
-                    : 'transparent',
-              }}
-            >
-              {marker.type && (
-                <div
-                  className="w-1 h-full"
-                  style={{
-                    backgroundColor:
-                      marker.type === 'added'
-                        ? '#22c55e' // green
-                        : marker.type === 'modified'
-                        ? '#3b82f6' // blue
-                        : '#ef4444', // red
-                  }}
-                />
-              )}
-            </div>
-          ))}
-        </div>
-
-        {/* Editor */}
-        <div className="flex-1">
-          <EditorContent editor={editor} className="h-full" />
-        </div>
+      {/* Editor Content */}
+      <div className="flex-1 overflow-auto" ref={editorContainerRef}>
+        <EditorContent editor={editor} className="h-full" />
       </div>
     </div>
   );
