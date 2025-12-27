@@ -28,7 +28,7 @@ The promotion is at a crossroads: stay independent and probably die slowly, or g
 
 ### NEMORINO (NEMO RENO)
 
-_Babyface. Lower-card. The guy who opens the show._
+_Babyface. Lower-card._ The guy who opens the show.
 
 Nemo has been wrestling for Amore Pro for six years. He's technically solid—good fundamentals, safe worker, shows up early and stays late. But he has no gimmick, no presence, no "it factor." His entrance music is generic. His tights are plain black. When he wrestles, the crowd goes to get beer.
 
