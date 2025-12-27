@@ -97,8 +97,12 @@ export async function POST(request: NextRequest) {
           return NextResponse.json({ error: 'Commit message required' }, { status: 400 });
         }
 
-        // First add all changes
-        await git.add('.');
+        // Add only the specified file(s), or all if none specified
+        if (files && files.length > 0) {
+          await git.add(files);
+        } else {
+          await git.add('.');
+        }
 
         // Then commit
         const result = await git.commit(message);

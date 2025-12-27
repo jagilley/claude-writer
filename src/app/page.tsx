@@ -117,7 +117,7 @@ export default function Home() {
     }
   }, [currentDocument]);
 
-  // Commit changes to git
+  // Commit changes to git (only the current file)
   const commitDocument = async () => {
     if (!currentDocument || !hasUncommittedChanges(committedContent, documentContent)) return;
 
@@ -126,13 +126,14 @@ export default function Home() {
       // First ensure file is saved
       await autoSaveToFile(documentContent);
 
-      // Then commit to git
+      // Then commit only this file to git
       const response = await fetch('/api/git', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'commit',
           message: `Update ${currentDocument.name}`,
+          files: [currentDocument.path],
         }),
       });
 
@@ -293,18 +294,18 @@ export default function Home() {
     });
   };
 
-  // Keyboard shortcut for commit (Cmd+S)
+  // Keyboard shortcut for save (Cmd+S) - saves to disk only, does not commit
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 's') {
         e.preventDefault();
-        commitDocument();
+        autoSaveToFile(documentContent);
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [currentDocument, documentContent, committedContent]);
+  }, [documentContent, autoSaveToFile]);
 
   return (
     <div className="flex h-screen overflow-hidden">
@@ -347,7 +348,7 @@ export default function Home() {
               onClick={() => commitDocument()}
               disabled={!hasUncommittedChanges(committedContent, documentContent) || isCommitting}
               className="px-3 py-1 text-sm bg-[var(--accent)] text-white rounded hover:bg-[var(--accent-hover)] disabled:opacity-50 disabled:cursor-not-allowed"
-              title="Commit (Cmd+S)"
+              title="Commit this file to git"
             >
               Commit
             </button>
