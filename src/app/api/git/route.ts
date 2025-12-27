@@ -43,6 +43,22 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ isRepo });
       }
 
+      case 'showFile': {
+        // Get file content at HEAD (last commit)
+        const filePath = searchParams.get('file');
+        if (!filePath) {
+          return NextResponse.json({ error: 'File path required' }, { status: 400 });
+        }
+        try {
+          // Get the file content at HEAD
+          const content = await git.show([`HEAD:${filePath}`]);
+          return NextResponse.json({ content });
+        } catch {
+          // File might not exist in git yet (new file)
+          return NextResponse.json({ content: null });
+        }
+      }
+
       default:
         return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
     }

@@ -8,17 +8,21 @@ import Highlight from '@tiptap/extension-highlight';
 import Typography from '@tiptap/extension-typography';
 import { useCallback, useEffect, useState, useRef } from 'react';
 import { markdownToHtml, htmlToMarkdown } from '@/lib/markdown';
+import { LineDiff } from '@/lib/diff';
 
 interface EditorProps {
   content: string;
+  lineDiffs: LineDiff[];
   onContentChange: (markdown: string) => void;
   onSelectionChange: (selection: { text: string; from: number; to: number } | null) => void;
   onOpenChat: (selectedText: string) => void;
 }
 
-export default function Editor({ content, onContentChange, onSelectionChange, onOpenChat }: EditorProps) {
+export default function Editor({ content, lineDiffs, onContentChange, onSelectionChange, onOpenChat }: EditorProps) {
   const [selectionMenu, setSelectionMenu] = useState<{ x: number; y: number; text: string } | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  const gutterRef = useRef<HTMLDivElement>(null);
+  const editorContainerRef = useRef<HTMLDivElement>(null);
 
   const editor = useEditor({
     immediatelyRender: false,
@@ -95,6 +99,19 @@ export default function Editor({ content, onContentChange, onSelectionChange, on
       setSelectionMenu(null);
     }
   }, [selectionMenu, onOpenChat]);
+
+  // Get diff type for a line number
+  const getDiffType = useCallback((lineNum: number) => {
+    const diff = lineDiffs.find(d => d.lineNumber === lineNum);
+    return diff?.type || null;
+  }, [lineDiffs]);
+
+  // Compute gutter markers based on content lines
+  const gutterMarkers = content.split('\n').map((_, index) => {
+    const lineNum = index + 1;
+    const diffType = getDiffType(lineNum);
+    return { lineNumber: lineNum, type: diffType };
+  });
 
   if (!editor) {
     return <div className="flex items-center justify-center h-full">Loading editor...</div>;
@@ -215,9 +232,50 @@ export default function Editor({ content, onContentChange, onSelectionChange, on
         </div>
       )}
 
-      {/* Editor Content */}
-      <div className="flex-1 overflow-auto">
-        <EditorContent editor={editor} className="h-full" />
+      {/* Editor Content with Gutter */}
+      <div className="flex-1 overflow-auto flex" ref={editorContainerRef}>
+        {/* Diff Gutter */}
+        <div
+          ref={gutterRef}
+          className="flex-shrink-0 w-3 bg-transparent"
+          style={{ minWidth: '12px' }}
+        >
+          {gutterMarkers.map((marker, index) => (
+            <div
+              key={index}
+              className="h-6 flex items-center justify-center"
+              style={{
+                backgroundColor:
+                  marker.type === 'added'
+                    ? 'rgba(34, 197, 94, 0.3)' // green
+                    : marker.type === 'modified'
+                    ? 'rgba(59, 130, 246, 0.3)' // blue
+                    : marker.type === 'removed'
+                    ? 'rgba(239, 68, 68, 0.3)' // red
+                    : 'transparent',
+              }}
+            >
+              {marker.type && (
+                <div
+                  className="w-1 h-full"
+                  style={{
+                    backgroundColor:
+                      marker.type === 'added'
+                        ? '#22c55e' // green
+                        : marker.type === 'modified'
+                        ? '#3b82f6' // blue
+                        : '#ef4444', // red
+                  }}
+                />
+              )}
+            </div>
+          ))}
+        </div>
+
+        {/* Editor */}
+        <div className="flex-1">
+          <EditorContent editor={editor} className="h-full" />
+        </div>
       </div>
     </div>
   );

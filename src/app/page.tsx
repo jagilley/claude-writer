@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import { v4 as uuidv4 } from 'uuid';
 import { Chat, DocumentFile, ModelSettings, DEFAULT_MODEL_SETTINGS } from '@/lib/types';
+import { computeLineDiffs, LineDiff, hasUncommittedChanges } from '@/lib/diff';
 import Sidebar from '@/components/Sidebar';
 import ChatWindow from '@/components/ChatWindow';
 
@@ -23,14 +24,15 @@ const Editor = dynamic(() => import('@/components/Editor'), {
 export default function Home() {
   const [currentDocument, setCurrentDocument] = useState<DocumentFile | null>(null);
   const [documentContent, setDocumentContent] = useState('');
-  const [originalContent, setOriginalContent] = useState(''); // Track original for comparison
+  const [committedContent, setCommittedContent] = useState(''); // Content at last git commit
+  const [lineDiffs, setLineDiffs] = useState<LineDiff[]>([]); // Line-level diff markers
   const [chats, setChats] = useState<Chat[]>([]);
   const [activeChats, setActiveChats] = useState<string[]>([]);
   const [modelSettings, setModelSettings] = useState<ModelSettings>(DEFAULT_MODEL_SETTINGS);
   const [sidebarTab, setSidebarTab] = useState<'files' | 'chats' | 'settings'>('files');
   const [currentSelection, setCurrentSelection] = useState<{ text: string; from: number; to: number } | null>(null);
-  const [isSaving, setIsSaving] = useState(false);
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [isCommitting, setIsCommitting] = useState(false);
+  const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Load settings from localStorage on mount
   useEffect(() => {
@@ -66,38 +68,64 @@ export default function Home() {
     localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(newSettings));
   };
 
-  const saveDocument = async () => {
-    if (!currentDocument || !hasUnsavedChanges) return;
+  // Auto-save to disk (debounced)
+  const autoSaveToFile = useCallback(async (content: string) => {
+    if (!currentDocument) return;
 
-    setIsSaving(true);
     try {
       await fetch('/api/files', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           path: currentDocument.path,
-          content: documentContent,
+          content: content,
+        }),
+      });
+    } catch (error) {
+      console.error('Error auto-saving document:', error);
+    }
+  }, [currentDocument]);
+
+  // Commit changes to git
+  const commitDocument = async () => {
+    if (!currentDocument || !hasUncommittedChanges(committedContent, documentContent)) return;
+
+    setIsCommitting(true);
+    try {
+      // First ensure file is saved
+      await autoSaveToFile(documentContent);
+
+      // Then commit to git
+      const response = await fetch('/api/git', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'commit',
+          message: `Update ${currentDocument.name}`,
         }),
       });
 
-      // Update original content to current, so future comparisons work correctly
-      setOriginalContent(documentContent);
-      setHasUnsavedChanges(false);
+      if (response.ok) {
+        // Update committed content - diffs will clear automatically
+        setCommittedContent(documentContent);
+        setLineDiffs([]);
+      }
     } catch (error) {
-      console.error('Error saving document:', error);
+      console.error('Error committing document:', error);
     } finally {
-      setIsSaving(false);
+      setIsCommitting(false);
     }
   };
 
   const handleFileSelect = async (file: { path: string; name: string }) => {
-    // Warn if there are unsaved changes
-    if (hasUnsavedChanges) {
-      const confirmed = window.confirm('You have unsaved changes. Discard them?');
+    // Warn if there are uncommitted changes
+    if (hasUncommittedChanges(committedContent, documentContent)) {
+      const confirmed = window.confirm('You have uncommitted changes. Discard them?');
       if (!confirmed) return;
     }
 
     try {
+      // Load the file content
       const response = await fetch('/api/files', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -107,8 +135,17 @@ export default function Home() {
       const doc: DocumentFile = await response.json();
       setCurrentDocument(doc);
       setDocumentContent(doc.content);
-      setOriginalContent(''); // Will be set after first editor render
-      setHasUnsavedChanges(false);
+
+      // Load the committed version from git
+      const gitResponse = await fetch(`/api/git?action=showFile&file=${encodeURIComponent(file.path)}`);
+      const gitData = await gitResponse.json();
+
+      // If file exists in git, use that as committed content, otherwise use current content
+      const committed = gitData.content ?? doc.content;
+      setCommittedContent(committed);
+
+      // Compute initial diffs
+      setLineDiffs(computeLineDiffs(committed, doc.content));
     } catch (error) {
       console.error('Error loading file:', error);
     }
@@ -117,15 +154,16 @@ export default function Home() {
   const handleContentChange = (markdown: string) => {
     setDocumentContent(markdown);
 
-    // On first change after file load, capture the "normalized" content
-    // (after markdown→HTML→markdown round-trip) as our baseline
-    if (originalContent === '') {
-      setOriginalContent(markdown);
-      setHasUnsavedChanges(false);
-    } else {
-      // Only mark as changed if content actually differs from original
-      setHasUnsavedChanges(markdown !== originalContent);
+    // Compute line diffs against committed content
+    setLineDiffs(computeLineDiffs(committedContent, markdown));
+
+    // Debounced auto-save to disk
+    if (autoSaveTimeoutRef.current) {
+      clearTimeout(autoSaveTimeoutRef.current);
     }
+    autoSaveTimeoutRef.current = setTimeout(() => {
+      autoSaveToFile(markdown);
+    }, 500); // 500ms debounce
   };
 
   const handleSelectionChange = (selection: { text: string; from: number; to: number } | null) => {
@@ -213,18 +251,18 @@ export default function Home() {
     });
   };
 
-  // Keyboard shortcut for save
+  // Keyboard shortcut for commit (Cmd+S)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 's') {
         e.preventDefault();
-        saveDocument();
+        commitDocument();
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [currentDocument, documentContent, hasUnsavedChanges]);
+  }, [currentDocument, documentContent, committedContent]);
 
   return (
     <div className="flex h-screen overflow-hidden">
@@ -250,8 +288,10 @@ export default function Home() {
             {currentDocument ? (
               <>
                 <span className="font-medium">{currentDocument.name}</span>
-                {hasUnsavedChanges && <span className="text-yellow-500" title="Unsaved changes">●</span>}
-                {isSaving && <span className="text-gray-400 text-sm">Saving...</span>}
+                {hasUncommittedChanges(committedContent, documentContent) && (
+                  <span className="text-yellow-500" title="Uncommitted changes">●</span>
+                )}
+                {isCommitting && <span className="text-gray-400 text-sm">Committing...</span>}
               </>
             ) : (
               <span className="text-gray-400">Select a file to edit</span>
@@ -260,12 +300,12 @@ export default function Home() {
 
           {currentDocument && (
             <button
-              onClick={() => saveDocument()}
-              disabled={!hasUnsavedChanges || isSaving}
+              onClick={() => commitDocument()}
+              disabled={!hasUncommittedChanges(committedContent, documentContent) || isCommitting}
               className="px-3 py-1 text-sm bg-[var(--accent)] text-white rounded hover:bg-[var(--accent-hover)] disabled:opacity-50 disabled:cursor-not-allowed"
-              title="Save (Cmd+S)"
+              title="Commit (Cmd+S)"
             >
-              Save
+              Commit
             </button>
           )}
         </div>
@@ -275,6 +315,7 @@ export default function Home() {
           {currentDocument ? (
             <Editor
               content={documentContent}
+              lineDiffs={lineDiffs}
               onContentChange={handleContentChange}
               onSelectionChange={handleSelectionChange}
               onOpenChat={handleOpenChat}

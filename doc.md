@@ -71,7 +71,7 @@ He speaks like a tent revival preacher crossed with a used car salesman. He has 
 ### THE ROSTER (Ensemble)
 
 -   **GIANNETTA** — Veteran of the women's division, locker room gossip, secretly has a heart of gold
-
+    
 -   **VARIOUS WRESTLERS** — Faces and heels, the community of Amore Pro
     
 
