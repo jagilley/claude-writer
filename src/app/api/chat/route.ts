@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@anthropic-ai/claude-agent-sdk';
-import type { ModelType } from '@/lib/types';
+import type { ModelSettings } from '@/lib/types';
 
 export const maxDuration = 300; // 5 minutes max for streaming responses
 
@@ -12,7 +12,14 @@ export async function POST(request: NextRequest) {
       documentPath,
       selectedText,
       chatHistory,
-      model
+      modelSettings
+    }: {
+      prompt: string;
+      documentContent: string;
+      documentPath: string;
+      selectedText?: string;
+      chatHistory: Array<{ role: string; content: string }>;
+      modelSettings: ModelSettings;
     } = await request.json();
 
     // Build the system context
@@ -46,6 +53,21 @@ ${selectedText}
 
     fullPrompt += `User: ${prompt}\n\nAssistant:`;
 
+    // Build query options based on model settings
+    const queryOptions: Record<string, unknown> = {
+      allowedTools: ['Read', 'Edit', 'Write', 'Glob', 'Grep'],
+      model: modelSettings.modelId || 'claude-sonnet-4-20250514',
+      permissionMode: 'acceptEdits',
+    };
+
+    // Add thinking configuration if enabled
+    if (modelSettings.thinkingMode === 'enabled') {
+      queryOptions.thinking = {
+        type: 'enabled',
+        budget_tokens: modelSettings.thinkingBudget || 10000,
+      };
+    }
+
     // Create a streaming response
     const encoder = new TextEncoder();
     const stream = new ReadableStream({
@@ -53,11 +75,7 @@ ${selectedText}
         try {
           for await (const message of query({
             prompt: fullPrompt,
-            options: {
-              allowedTools: ['Read', 'Edit', 'Write', 'Glob', 'Grep'],
-              model: model || 'claude-sonnet-4-20250514',
-              permissionMode: 'acceptEdits',
-            },
+            options: queryOptions,
           })) {
             // Handle different message types from the SDK
             if ('type' in message) {
@@ -68,6 +86,9 @@ ${selectedText}
                   for (const block of content) {
                     if (block.type === 'text') {
                       controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'text', content: block.text })}\n\n`));
+                    } else if (block.type === 'thinking') {
+                      // Stream thinking content with a different type
+                      controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'thinking', content: block.thinking })}\n\n`));
                     } else if (block.type === 'tool_use') {
                       controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'tool_use', tool: block.name, input: block.input })}\n\n`));
                     }

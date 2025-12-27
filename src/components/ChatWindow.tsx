@@ -2,13 +2,13 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { Rnd } from 'react-rnd';
-import { Chat, ChatMessage, ModelType } from '@/lib/types';
+import { Chat, ChatMessage, ModelSettings } from '@/lib/types';
 import { v4 as uuidv4 } from 'uuid';
 
 interface ChatWindowProps {
   chat: Chat;
   documentContent: string;
-  selectedModel: ModelType;
+  modelSettings: ModelSettings;
   onUpdate: (chat: Chat) => void;
   onClose: () => void;
   onMinimize: () => void;
@@ -17,7 +17,7 @@ interface ChatWindowProps {
 export default function ChatWindow({
   chat,
   documentContent,
-  selectedModel,
+  modelSettings,
   onUpdate,
   onClose,
   onMinimize,
@@ -25,6 +25,8 @@ export default function ChatWindow({
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [streamingContent, setStreamingContent] = useState('');
+  const [thinkingContent, setThinkingContent] = useState('');
+  const [showThinking, setShowThinking] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -56,6 +58,8 @@ export default function ChatWindow({
     setInput('');
     setIsLoading(true);
     setStreamingContent('');
+    setThinkingContent('');
+    setShowThinking(false);
 
     try {
       const response = await fetch('/api/chat', {
@@ -67,7 +71,7 @@ export default function ChatWindow({
           documentPath: chat.documentPath,
           selectedText: chat.selectedText,
           chatHistory: chat.messages,
-          model: selectedModel,
+          modelSettings,
         }),
       });
 
@@ -98,6 +102,9 @@ export default function ChatWindow({
               if (parsed.type === 'text') {
                 fullContent += parsed.content;
                 setStreamingContent(fullContent);
+              } else if (parsed.type === 'thinking') {
+                setThinkingContent(prev => prev + parsed.content);
+                setShowThinking(true);
               } else if (parsed.type === 'result') {
                 fullContent = parsed.content || fullContent;
                 setStreamingContent(fullContent);
@@ -232,6 +239,19 @@ export default function ChatWindow({
             </div>
           ))}
 
+          {/* Thinking indicator */}
+          {showThinking && thinkingContent && (
+            <div className="mb-2 p-2 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
+              <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400 text-xs font-medium mb-1">
+                <span className="spinner" style={{ width: 12, height: 12 }}></span>
+                Thinking...
+              </div>
+              <div className="text-xs text-amber-600 dark:text-amber-300 whitespace-pre-wrap max-h-32 overflow-y-auto">
+                {thinkingContent.slice(-500)}
+              </div>
+            </div>
+          )}
+
           {streamingContent && (
             <div className="message assistant">
               <div className="whitespace-pre-wrap">{streamingContent}</div>
@@ -239,7 +259,7 @@ export default function ChatWindow({
             </div>
           )}
 
-          {isLoading && !streamingContent && (
+          {isLoading && !streamingContent && !thinkingContent && (
             <div className="message assistant">
               <span className="spinner"></span>
               <span className="ml-2">Thinking...</span>

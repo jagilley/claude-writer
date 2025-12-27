@@ -3,9 +3,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import { v4 as uuidv4 } from 'uuid';
-import { Chat, DocumentFile, ModelType } from '@/lib/types';
+import { Chat, DocumentFile, ModelSettings, DEFAULT_MODEL_SETTINGS } from '@/lib/types';
 import Sidebar from '@/components/Sidebar';
 import ChatWindow from '@/components/ChatWindow';
+
+const SETTINGS_STORAGE_KEY = 'writer-model-settings';
 
 // Dynamic import for Editor to avoid SSR issues with TipTap
 const Editor = dynamic(() => import('@/components/Editor'), {
@@ -21,13 +23,27 @@ const Editor = dynamic(() => import('@/components/Editor'), {
 export default function Home() {
   const [currentDocument, setCurrentDocument] = useState<DocumentFile | null>(null);
   const [documentContent, setDocumentContent] = useState('');
+  const [originalContent, setOriginalContent] = useState(''); // Track original for comparison
   const [chats, setChats] = useState<Chat[]>([]);
   const [activeChats, setActiveChats] = useState<string[]>([]);
-  const [selectedModel, setSelectedModel] = useState<ModelType>('claude-sonnet-4-20250514');
-  const [sidebarTab, setSidebarTab] = useState<'files' | 'chats'>('files');
+  const [modelSettings, setModelSettings] = useState<ModelSettings>(DEFAULT_MODEL_SETTINGS);
+  const [sidebarTab, setSidebarTab] = useState<'files' | 'chats' | 'settings'>('files');
   const [currentSelection, setCurrentSelection] = useState<{ text: string; from: number; to: number } | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+
+  // Load settings from localStorage on mount
+  useEffect(() => {
+    const savedSettings = localStorage.getItem(SETTINGS_STORAGE_KEY);
+    if (savedSettings) {
+      try {
+        const parsed = JSON.parse(savedSettings);
+        setModelSettings({ ...DEFAULT_MODEL_SETTINGS, ...parsed });
+      } catch (e) {
+        console.error('Error parsing saved settings:', e);
+      }
+    }
+  }, []);
 
   // Load chats from storage
   useEffect(() => {
@@ -44,16 +60,11 @@ export default function Home() {
     }
   };
 
-  // Auto-save with debounce
-  useEffect(() => {
-    if (!currentDocument || !hasUnsavedChanges) return;
-
-    const timer = setTimeout(async () => {
-      await saveDocument();
-    }, 2000); // 2 second debounce
-
-    return () => clearTimeout(timer);
-  }, [documentContent, currentDocument, hasUnsavedChanges]);
+  // Save settings to localStorage when they change
+  const handleModelSettingsChange = (newSettings: ModelSettings) => {
+    setModelSettings(newSettings);
+    localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(newSettings));
+  };
 
   const saveDocument = async () => {
     if (!currentDocument || !hasUnsavedChanges) return;
@@ -69,16 +80,8 @@ export default function Home() {
         }),
       });
 
-      // Auto-commit (optional - can be disabled)
-      await fetch('/api/git', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'autoCommit',
-          message: `Update ${currentDocument.name}`,
-        }),
-      });
-
+      // Update original content to current, so future comparisons work correctly
+      setOriginalContent(documentContent);
       setHasUnsavedChanges(false);
     } catch (error) {
       console.error('Error saving document:', error);
@@ -88,9 +91,10 @@ export default function Home() {
   };
 
   const handleFileSelect = async (file: { path: string; name: string }) => {
-    // Save current document before switching
+    // Warn if there are unsaved changes
     if (hasUnsavedChanges) {
-      await saveDocument();
+      const confirmed = window.confirm('You have unsaved changes. Discard them?');
+      if (!confirmed) return;
     }
 
     try {
@@ -103,6 +107,7 @@ export default function Home() {
       const doc: DocumentFile = await response.json();
       setCurrentDocument(doc);
       setDocumentContent(doc.content);
+      setOriginalContent(''); // Will be set after first editor render
       setHasUnsavedChanges(false);
     } catch (error) {
       console.error('Error loading file:', error);
@@ -111,7 +116,16 @@ export default function Home() {
 
   const handleContentChange = (markdown: string) => {
     setDocumentContent(markdown);
-    setHasUnsavedChanges(true);
+
+    // On first change after file load, capture the "normalized" content
+    // (after markdown→HTML→markdown round-trip) as our baseline
+    if (originalContent === '') {
+      setOriginalContent(markdown);
+      setHasUnsavedChanges(false);
+    } else {
+      // Only mark as changed if content actually differs from original
+      setHasUnsavedChanges(markdown !== originalContent);
+    }
   };
 
   const handleSelectionChange = (selection: { text: string; from: number; to: number } | null) => {
@@ -199,6 +213,19 @@ export default function Home() {
     });
   };
 
+  // Keyboard shortcut for save
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 's') {
+        e.preventDefault();
+        saveDocument();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [currentDocument, documentContent, hasUnsavedChanges]);
+
   return (
     <div className="flex h-screen overflow-hidden">
       {/* Sidebar */}
@@ -206,12 +233,12 @@ export default function Home() {
         currentDocument={currentDocument}
         chats={chats}
         activeTab={sidebarTab}
-        selectedModel={selectedModel}
+        modelSettings={modelSettings}
         onTabChange={setSidebarTab}
         onFileSelect={handleFileSelect}
         onChatSelect={handleChatSelect}
         onChatDelete={handleChatDelete}
-        onModelChange={setSelectedModel}
+        onModelSettingsChange={handleModelSettingsChange}
         onNewChat={() => createNewChat()}
       />
 
@@ -223,7 +250,7 @@ export default function Home() {
             {currentDocument ? (
               <>
                 <span className="font-medium">{currentDocument.name}</span>
-                {hasUnsavedChanges && <span className="text-yellow-500">●</span>}
+                {hasUnsavedChanges && <span className="text-yellow-500" title="Unsaved changes">●</span>}
                 {isSaving && <span className="text-gray-400 text-sm">Saving...</span>}
               </>
             ) : (
@@ -236,6 +263,7 @@ export default function Home() {
               onClick={() => saveDocument()}
               disabled={!hasUnsavedChanges || isSaving}
               className="px-3 py-1 text-sm bg-[var(--accent)] text-white rounded hover:bg-[var(--accent-hover)] disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Save (Cmd+S)"
             >
               Save
             </button>
@@ -274,7 +302,7 @@ export default function Home() {
               key={chat.id}
               chat={chat}
               documentContent={documentContent}
-              selectedModel={selectedModel}
+              modelSettings={modelSettings}
               onUpdate={handleChatUpdate}
               onClose={() => handleChatClose(chat.id)}
               onMinimize={() => handleChatMinimize(chat.id)}

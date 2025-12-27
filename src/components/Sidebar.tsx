@@ -1,18 +1,19 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Chat, ModelType, DocumentFile } from '@/lib/types';
+import { Chat, DocumentFile, ModelSettings } from '@/lib/types';
+import Settings from './Settings';
 
 interface SidebarProps {
   currentDocument: DocumentFile | null;
   chats: Chat[];
-  activeTab: 'files' | 'chats';
-  selectedModel: ModelType;
-  onTabChange: (tab: 'files' | 'chats') => void;
+  activeTab: 'files' | 'chats' | 'settings';
+  modelSettings: ModelSettings;
+  onTabChange: (tab: 'files' | 'chats' | 'settings') => void;
   onFileSelect: (file: { path: string; name: string }) => void;
   onChatSelect: (chatId: string) => void;
   onChatDelete: (chatId: string) => void;
-  onModelChange: (model: ModelType) => void;
+  onModelSettingsChange: (settings: ModelSettings) => void;
   onNewChat: () => void;
 }
 
@@ -26,12 +27,12 @@ export default function Sidebar({
   currentDocument,
   chats,
   activeTab,
-  selectedModel,
+  modelSettings,
   onTabChange,
   onFileSelect,
   onChatSelect,
   onChatDelete,
-  onModelChange,
+  onModelSettingsChange,
   onNewChat,
 }: SidebarProps) {
   const [files, setFiles] = useState<FileEntry[]>([]);
@@ -64,27 +65,20 @@ export default function Sidebar({
 
   return (
     <div className="sidebar">
-      {/* Header with model selector */}
+      {/* Header */}
       <div className="sidebar-header">
-        <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center justify-between">
           <span className="text-lg font-semibold">Writer</span>
+          <span className="text-xs text-gray-400 truncate max-w-[120px]" title={modelSettings.modelId}>
+            {modelSettings.modelId.split('-').slice(0, 2).join(' ')}
+          </span>
         </div>
-
-        {/* Model selector */}
-        <select
-          value={selectedModel}
-          onChange={(e) => onModelChange(e.target.value as ModelType)}
-          className="model-selector w-full"
-        >
-          <option value="claude-sonnet-4-20250514">Claude Sonnet 4.5</option>
-          <option value="claude-opus-4-0-20250115">Claude Opus 4</option>
-        </select>
       </div>
 
       {/* Tabs */}
       <div className="flex border-b border-[var(--chat-border)]">
         <button
-          className={`flex-1 py-2 px-4 text-sm font-medium transition-colors ${
+          className={`flex-1 py-2 px-2 text-sm font-medium transition-colors ${
             activeTab === 'files'
               ? 'border-b-2 border-[var(--accent)] text-[var(--accent)]'
               : 'text-gray-500 hover:text-gray-700'
@@ -94,7 +88,7 @@ export default function Sidebar({
           Files
         </button>
         <button
-          className={`flex-1 py-2 px-4 text-sm font-medium transition-colors ${
+          className={`flex-1 py-2 px-2 text-sm font-medium transition-colors ${
             activeTab === 'chats'
               ? 'border-b-2 border-[var(--accent)] text-[var(--accent)]'
               : 'text-gray-500 hover:text-gray-700'
@@ -102,6 +96,16 @@ export default function Sidebar({
           onClick={() => onTabChange('chats')}
         >
           Chats ({chats.length})
+        </button>
+        <button
+          className={`flex-1 py-2 px-2 text-sm font-medium transition-colors ${
+            activeTab === 'settings'
+              ? 'border-b-2 border-[var(--accent)] text-[var(--accent)]'
+              : 'text-gray-500 hover:text-gray-700'
+          }`}
+          onClick={() => onTabChange('settings')}
+        >
+          Settings
         </button>
       </div>
 
@@ -140,7 +144,7 @@ export default function Sidebar({
               </div>
             )}
           </div>
-        ) : (
+        ) : activeTab === 'chats' ? (
           <div>
             {/* New Chat button */}
             <button
@@ -191,6 +195,11 @@ export default function Sidebar({
               </div>
             )}
           </div>
+        ) : (
+          <Settings
+            settings={modelSettings}
+            onSettingsChange={onModelSettingsChange}
+          />
         )}
       </div>
     </div>

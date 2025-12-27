@@ -27,14 +27,26 @@ export interface DocumentFile {
   lastModified: string;
 }
 
-export type ModelType = 'claude-sonnet-4-20250514' | 'claude-opus-4-0-20250115';
+export type ThinkingMode = 'disabled' | 'enabled';
+
+export interface ModelSettings {
+  modelId: string;
+  thinkingMode: ThinkingMode;
+  thinkingBudget: number; // tokens, 0 means no limit
+}
+
+export const DEFAULT_MODEL_SETTINGS: ModelSettings = {
+  modelId: 'claude-sonnet-4-20250514',
+  thinkingMode: 'disabled',
+  thinkingBudget: 10000,
+};
 
 export interface AppState {
   currentDocument: DocumentFile | null;
   chats: Chat[];
   activeChats: string[]; // IDs of open chat windows
-  selectedModel: ModelType;
-  sidebarTab: 'files' | 'chats';
+  modelSettings: ModelSettings;
+  sidebarTab: 'files' | 'chats' | 'settings';
 }
 
 export interface GitCommit {
